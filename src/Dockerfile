@@ -1,12 +1,8 @@
 # Flask app Dockerfile
-FROM python:3.8-alpine
+FROM python:3.8
 
 # Install needed dependencies for our app to run.
-RUN apk update \
-  && apk add --no-cache \
-    gcc \
-    libffi-dev \
-    musl-dev
+RUN apt update
 
 WORKDIR /opt/app
 
@@ -28,6 +24,7 @@ ENV PATH="/home/$USER/.local/bin:${PATH}"
 
 # Copy requirements file to our container, install, and remove
 # files to we don't need to reduce the container size
+
 COPY requirements.txt .
 RUN pip install \
     --no-cache-dir \
@@ -38,8 +35,9 @@ RUN pip install \
     \( -type d -a -name test -o -name tests \) \
     -o \( -type f -a -name '*.pyc' -o -name '*.pyo' \) \
     -exec rm -rf '{}' +
-
+COPY example_app /opt/app/
 # Copy app to container (with privileges to non-root user)
 COPY --chown=$USER:$GROUP . .
 
-# Gunicorn is run from the docker-compose file
+CMD ["gunicorn","--bind","0.0.0.0:5000","--workers","10","example_app:app"]
+# Gunicorn is not run from the docker-compose file
