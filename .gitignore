@@ -4,5 +4,4 @@ core/venv
 *.tar
 *.swp
 *.log
-.venv
-.env
+*.pyc
