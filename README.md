@@ -20,8 +20,8 @@ nginx | `nginx:1.19-alpine`
 
 dependency | commands
 --- | ---
-docker | [commands for Debian / Ubuntu](https://gist.github.com/smallwat3r/a1664013e6ca8fb9ee02dd4b886a4996)
-docker-compose | [commands for Debian / Ubuntu](https://gist.github.com/smallwat3r/05f4b4a7a8361901d23bfdd492e40870)
+docker 
+docker-compose
 make | `sudo apt install make`
 a domain or sub-domain | DNS A record needs to points to your server static IP
 open ports | 80 (http) and 443 (https)
@@ -31,7 +31,7 @@ open ports | 80 (http) and 443 (https)
 #### 1) Clone this repo on your server
 
 ```sh
-sudo git clone https://github.com/smallwat3r/docker-nginx-gunicorn-flask-letsencrypt.git
+sudo git clone https://github.com/ivisproxads/ivisqr.git
 ```
 
 Install docker, docker-compose and make (commands can be found
@@ -46,7 +46,7 @@ Log out from the server and log back in for changes to apply.
 
 #### 3) Define your application details
 
-Copy `.env.example` to `.env` and set up the environment variables.
+Modify `.env` and set up the environment variables.
 ```sh
 # .env
 
@@ -100,19 +100,3 @@ dc-start-local  Start docker for local dev (w/o nginx)
 ```
 
 Auto checks are running weekly to update the certificates.  
-
-## License
-
-See [LICENSE](https://github.com/smallwat3r/docker-nginx-gunicorn-flask-letsencrypt/blob/master/LICENSE) file.  
-
-## Contact
-
-Please report issues or questions 
-[here](https://github.com/smallwat3r/docker-nginx-gunicorn-flask-letsencrypt/issues).
-
-
-[![Buy me a coffee][buymeacoffee-shield]][buymeacoffee]
-
-
-[buymeacoffee-shield]: https://www.buymeacoffee.com/assets/img/guidelines/download-assets-sm-2.svg
-[buymeacoffee]: https://www.buymeacoffee.com/smallwat3r
