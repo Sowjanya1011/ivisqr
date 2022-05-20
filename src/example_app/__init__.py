@@ -36,8 +36,8 @@ app=Flask(__name__)
 
 
 # getting data from .env file
-account = os.environ.get('QRCODE_ACCOUNT')
-site =os.environ.get('QRCODE_SITE')
+# account = os.environ.get('QRCODE_ACCOUNT')
+# site =os.environ.get('QRCODE_SITE')
 
 
 # main api calling through
@@ -96,8 +96,8 @@ def index(site,account):
             res = get_image(re[0])
             
     except:
-        # defaultly gave image path
-        res = "https://wallpaperaccess.com/full/57166.jpg"
+        # default gave image path
+        res = "https://manistesting.s3.ap-south-1.amazonaws.com/459207.jpg"
 
     # returned when calling above api index.html will displayed
     return render_template('index.html',res = res)
