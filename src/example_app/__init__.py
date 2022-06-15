@@ -1,5 +1,5 @@
 #all modules are imported for their specific task
-
+from datetime import datetime
 # output of endpoint in json format 
 import json
 # database connection made by using pymysql connection
@@ -15,7 +15,7 @@ import os
 # entire application make by using flask framework
 from flask import Flask, render_template, flash, request, redirect, url_for,send_file
 #for getting rule based methods getting from test.py file
-from test import get_image,get_timing,get_temp,get_id,get_temp_time
+from test import get_device,get_latlng,get_temp,get_schedule,get_asset,get_assetId,get_rule
 # for getting  database and weather api details
 from dotenv import load_dotenv
 
@@ -27,17 +27,15 @@ host = os.environ.get('RDS_URL')
 user = os.environ.get('RDS_USER')
 password = os.environ.get('RDS_PASS')
 database = os.environ.get('RDS_DB')
-
-
+#port = int(os.environ.get('RDS_PORT'))
+device_type = os.environ.get('DEVICE_TYPE')
+asset_url = os.environ.get('ASSET_URL')
 # take one record for each hour using list like ‘rest’ -->its a temperary variable changed for each hour
 rest=[]
 #assigning Flask method to app variable
 app=Flask(__name__)
 
 
-# getting data from .env file
-# account = os.environ.get('QRCODE_ACCOUNT')
-# site =os.environ.get('QRCODE_SITE')
 
 
 # main api calling through
@@ -67,42 +65,78 @@ def index(site,account):
         a = [tm[:10],tm[11:13],data['ip'],data['browser'],data['os']] 
     #threading applied to extra functions what needs to done  and for store data in database 
     threading.Thread(target=dbstdata(a,data,site,account,tm)).start()
+    threading.Thread(target=raw_data(a,site,account)).start()
     #qr_code_id as account , site_id as site
     #calling rule function for getting rule from qr_code_id
-
-    r=rule(account)
-    #defaultly taken condition_id 1 as from ad variable
-    ad=1
     try:
-        if r == 1:
-            #-->calling get_id function for getting image path id
-            re=get_id(ad,r,account,site)
-            #→getting image from id
-            res = get_image(re[0])
-        elif r == 2:
-            #→getting timing ads from given variables
-            re = get_timing(site,account,r)
-            #→getting image from id
-            res = get_image(re[0])
-        elif r == 3:
-            #→getting temperature based ads and ids from rule
-            re = get_temp(site,account,r)
-            #→getting image from id
-            res = get_image(re[0])
-        else:
-            #→getting temp_time based on rule 2 & 3
-            re = get_temp_time(site,account,r)
-            #→getting image from id
-            res = get_image(re[0])
+        r=get_schedule(account,site)
+        if len(r) >= 1:
+            for i in r:
+                today =datetime.now()
+                From_time = datetime.fromisoformat(i[0])
+                To_time = datetime.fromisoformat(i[1])
+
+                if From_time <= today <=  To_time:
+                    a_id = i[2]
+                    break
+
+                else :
+                    data = get_device(account,site)
+                    latlng = get_latlng(site)
+                    rule = get_temp(latlng[0],latlng[1],data[0])
+                    rule_id = get_rule(rule)
+                    a_id = get_assetId(account,rule_id)
+        else :
+            data = get_device(account,site)
+            latlng = get_latlng(site)
+            rule = get_temp(latlng[0],latlng[1],data[0])
+            rule_id = get_rule(rule)
+            a_id = get_assetId(account,rule_id,site)
+
+
+
             
-    except:
-        # default gave image path
-        res = "https://manistesting.s3.ap-south-1.amazonaws.com/459207.jpg"
-
+    except Exception as e:
+        # defaultly gave image path through db
+        print(e)
+        a_id = 1
+        
+    res = get_asset(a_id)
+    qr_res = asset_url+res
     # returned when calling above api index.html will displayed
-    return render_template('index.html',res = res)
+    return render_template('index.html',res = qr_res)
 
 
+# connect database here by using this function
+def db():
+    # #mysql database connection
+    dbcon=p.connect(host=host,user=user,password=password,database=database)
+    # returning assigned cursor for the execution 
+    return dbcon.cursor()
+# query execution block
+def query_db(query, args=(), one=False):
+    # calling database connection
+    cur = db()
+    #applied what query as getting in argument
+    cur.execute(query, args)
+    r = [dict((cur.description[i][0], value) \
+               for i, value in enumerate(row)) for row in cur.fetchall()]
+    cur.connection.close()
+    #return tuples format records of given query wise data
+    return (r[0] if r else None) if one else r
+
+
+
+def raw_data(a,site,account):
+    #database connection here
+    con=p.connect(host=host,user=user,password=password,database=database)
+    # calling database connection
+    cur=con.cursor()
+    #inserting records of RawData query
+    sql="insert into qr_user_data(site_id,qr_code_id,scanned_date,hour,ipaddress,user_browser,user_device_os)values(%s,%s,%s,%s,%s,%s,%s)"
+    #excuting insering of the rawdata click wise records-->rawdata query will executed
+    cur.executemany(sql,[(site,account,a[0],a[1],a[2],a[-2],a[-1])])
+    con.commit() #for the confirmation inserting or updation
    
 
 # store hourwise data using funcion
@@ -112,7 +146,7 @@ def dbstdata(a,data,site,account,tm):
     # calling database connection
     cur=con.cursor()
     #inserting records of RawData query
-    sql="insert into qr_user_data(site_id,qr_code_id,scanned_date,hour,ipaddress,user_browser,user_device_os)values(%s,%s,%s,%s,%s,%s,%s)"
+    #sql="insert into qr_user_data(site_id,qr_code_id,scanned_date,hour,ipaddress,user_browser,user_device_os)values(%s,%s,%s,%s,%s,%s,%s)"
     #inserting records of HourlyData query
     sqls="insert into qr_hourly_user_data(site_id,qr_code_id,scanned_date,hour,VISITS,UNIQUES,user_browser,user_device_os,ipaddress)values(%s,%s,%s,%s,%s,%s,%s,%s,%s)"
     #getting visited hour time record of the same date and hour, by the specific site and qrcode_id 
@@ -120,8 +154,8 @@ def dbstdata(a,data,site,account,tm):
     #above executed records will store in check variable in tuple format
     check=cur.fetchall()
     #excuting insering of the rawdata click wise records-->rawdata query will executed
-    cur.executemany(sql,[(site,account,a[0],a[1],a[2],a[-2],a[-1])])
-    con.commit() #for the confirmation inserting or updation
+    #cur.executemany(sql,[(site,account,a[0],a[1],a[2],a[-2],a[-1])])
+    #con.commit() #for the confirmation inserting or updation
 
     #checking visited hour time record in check or not 
     if len(check)==0:
@@ -168,38 +202,12 @@ def dbstdata(a,data,site,account,tm):
         else:
             rest[-1][-2][a[-1]] = 1
         #updating rest record into hourlydata table record for the specific hour of each else case 
-        cur.executemany("update qr_hourly_user_data set site_id=%s,qr_code_id=%s,VISITS=%s,UNIQUES=%s,user_browser=%s,user_device_os=%s,ipaddress=%s where scanned_date=%s and hour=%s and site_id=%s and qr_code_id=%s order by scanned_date and hour desc limit 1",\
-        [(site,account,str(rest[-1][2]),str(rest[-1][3]),str(rest[-1][-3]),str(rest[-1][-2]),str(rest[-1][-1]),tm[:10],tm[11:13],site,account)])
-        con.commit()#for the confirmation inserting or updation
+        up_sql = "update qr_hourly_user_data set site_id=%s,qr_code_id=%s,VISITS=%s,UNIQUES=%s,user_browser=%s,user_device_os=%s,ipaddress=%s where scanned_date=%s and hour=%s and site_id=%s and qr_code_id=%s order by scanned_date and hour desc limit 1"
+        cur.execute(up_sql,(site,account,str(rest[-1][2]),str(rest[-1][3]),str(rest[-1][-3]),str(rest[-1][-2]),str(rest[-1][-1]),tm[:10],tm[11:13],site,account))
+        #cur.execute("""update qr_hourly_user_data set site_id=%s,qr_code_id=%s,VISITS=%s,UNIQUES=%s,user_browser=%s,user_device_os=%s,ipaddress=%s where scanned_date="%s" and hour=%s and site_id=%s and qr_code_id=%s order by scanned_date and hour desc limit 1""",(site,account,str(rest[-1][2]),str(rest[-1][3]),str(rest[-1][-3]),str(rest[-1][-2]),str(rest[-1][-1]),tm[:10],tm[11:13],site,account))
+        con.commit()
 
-
-# connect database here by using this function
-def db():
-    # #mysql database connection
-    dbcon=p.connect(host=host,user=user,password=password,database=database)
-    # returning assigned cursor for the execution 
-    return dbcon.cursor()
-# query execution block
-def query_db(query, args=(), one=False):
-    # calling database connection
-    cur = db()
-    #applied what query as getting in argument
-    cur.execute(query, args)
-    r = [dict((cur.description[i][0], value) \
-               for i, value in enumerate(row)) for row in cur.fetchall()]
-    cur.connection.close()
-    #return tuples format records of given query wise data
-    return (r[0] if r else None) if one else r
-
-# rule for ads
-def rule(account):
-    #calling database connection
-    cur=db()
-    #getting rule id from qr_code_id
-    cur.execute("select qr_rule_id from t_qr_rules where qr_code_id={}".format(account))
-    rule=cur.fetchone()[0]
-    return rule
-
+        
 
 # sub api calling thrigh endpoints like /hr/result
 @app.route('/<int:site>/<int:account>/hr/result', methods=['GET'])
@@ -236,5 +244,3 @@ def res(site,account):
     dfc=json.dumps(d,indent=4)
     return dfc
 
-
-# calling api's

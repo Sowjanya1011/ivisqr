@@ -10,113 +10,67 @@ host = os.environ.get('RDS_URL')
 user = os.environ.get('RDS_USER')
 password = os.environ.get('RDS_PASS')
 database = os.environ.get('RDS_DB')
+#port = int(os.environ.get('RDS_PORT'))
 key=os.environ.get('API_KEY')
-lat=os.environ.get('LATITUDE')
-lng=os.environ.get('LONGTITUDE')
-
+url=os.environ.get('URL')
+device_type = os.environ.get('DEVICE_TYPE')
 
 con=p.connect(host=host,user=user,password=password,database=database)
 cur=con.cursor()
-
-def get_image(re):
-
-    query1="select qr_ads_image_path from qr_ads_master where qr_ads_id = {}".format(re)
-
-    cur.execute(query1)
-
-    img = cur.fetchone()[0]
-
-    print(f"image:{img}")
-    return img
-
-def get_id(ad,r,account,site):
-    print(f"ad={ad},r={r},account={account},site={site}")
-    cur.execute("select id from qr_code_rule_engine where condition_id={} and rule_id={} and qr_code_id={} and site_id={}".format(ad,r,account,site))
-    id_main=cur.fetchone()
-    return id_main
-
-
-def get_latlong(site):
-    query="select latitude,longitude from account where accountId={}".format(site)
+def get_device(device_id,site):
+    query = "select temp_range from devices where deviceId={} and siteId={} and deviceTypeId={}".format(device_id,site,device_type)
     cur.execute(query)
-    latlng=cur.fetchone()
-    return float(latlng[0]),float(latlng[1])
+    res = cur.fetchone()
+    return res
+def get_latlng(site):
+    query = "select latitude,longitude from sites where siteId={}".format(site)
+    cur.execute(query)
+    res = cur.fetchone()
+    return res    
 
+def get_schedule(device_id,site):
+    query = "select start_time,end_time,asset_id from qr_schedule where device_id={} and site_id={}".format(device_id,site)
+    cur.execute(query)
+    res = cur.fetchall()
+    return res
+
+def get_asset(asset_id):
+    query = "select asset from assets where id={}".format(asset_id)
+    print("assetid:", asset_id)
+    cur.execute(query)
+    res = cur.fetchone()[0]
+    return res
+
+
+
+def get_temp(lat,lng,rng):
+    day = time.strftime("%p")
+    c =int(float(requests.get(url.format(lat,lng,key)).json()['current']['temp'])-273.15)
     
-
-def current_temp(lat,lng):
-    
-    api="https://api.openweathermap.org/data/2.5/onecall?lat={}&lon={}&exclude=hourly,daily&appid={}".format(lat,lng,key)
-
-    r=requests.get(api)
-
-    data=r.json()
-
-    F=float(data['current']['temp'])
-
-    c=int(F-273.15)
-    
-    return c
-
-
-def get_temp(site,account,r):
-
-    geo=get_latlong(site)
-    lat,lng=geo[0],geo[1]
-    c=current_temp(lat,lng)
-
-    if 1<=c<=14:
-        ad=4
-        re=get_id(ad,r,account,site)
- 
-
-    elif 15<=c<=35:
-        ad=5
-        re=get_id(ad,r,account,site)
-  
+    if 1 <= c <= rng:
+        a = 'R1'
+        
+    elif rng+1 <= c <= rng * 2:
+        a = 'R2'
         
     else:
-        ad=6
-        re=get_id(ad,r,account,site)
-    return re
-
+        a = 'R3'
     
-def get_timing(site,account,r):
+    return day+a
 
-    tm=time.strftime('%p')
-
-    if tm=='AM':
-        ad=2
-        re=get_id(ad,r,account,site)
-
-
-    else:
-        ad=3
-        re=get_id(ad,r,account,site)
-    return re
+def get_rule(rule):
+    query = "select id from rules where name='{}'".format(rule)
+    cur.execute(query)
+    res = cur.fetchone()[0]
+    print("rule:",res)
+    return res    
 
 
-def get_temp_time(site,account,r):
-    tme=get_timing(site,2,2)[0]
-    tmp=get_temp(site,3,3)[0]
-    if tme==2 and tmp==4:
-        ad=7
-        re=get_id(ad,r,account,site)
-    elif tme==2 and tmp==5:
-        ad=8
-        re=get_id(ad,r,account,site)
-    elif tme==2 and tmp==6:
-        ad=9
-        re=get_id(ad,r,account,site)
-    elif tme==3 and tmp==4:
-        ad=10
-        re=get_id(ad,r,account,site)
-    elif tme==3 and tmp==5:
-        ad=11
-        re=get_id(ad,r,account,site)
-    else :
-        ad=12
-        re=get_id(ad,r,account,site)
 
-    return re
-        
+def get_assetId(device_id,rule_id,site):
+    query = "select asset from rule_engine where device_id={} and rule={} and device_type='{}' and site_id={}".format(device_id,rule_id,device_type,site)
+    cur.execute(query)
+    res = cur.fetchone()[0]
+    print("assetid:",res)
+    return res        
+
