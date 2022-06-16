@@ -64,8 +64,8 @@ def index(site,account):
         #→assigning ‘a’ variable to what getting data from flask
         a = [tm[:10],tm[11:13],data['ip'],data['browser'],data['os']] 
     #threading applied to extra functions what needs to done  and for store data in database 
-    threading.Thread(target=dbstdata(a,data,site,account,tm)).start()
-    threading.Thread(target=raw_data(a,site,account)).start()
+    dbst = threading.Thread(target=dbstdata(a,data,site,account,tm)).start()
+    rawdata = threading.Thread(target=raw_data(a,site,account)).start()
     #qr_code_id as account , site_id as site
     #calling rule function for getting rule from qr_code_id
     try:
@@ -203,7 +203,7 @@ def dbstdata(a,data,site,account,tm):
             rest[-1][-2][a[-1]] = 1
         #updating rest record into hourlydata table record for the specific hour of each else case 
         up_sql = "update qr_hourly_user_data set site_id=%s,qr_code_id=%s,VISITS=%s,UNIQUES=%s,user_browser=%s,user_device_os=%s,ipaddress=%s where scanned_date=%s and hour=%s and site_id=%s and qr_code_id=%s order by scanned_date and hour desc limit 1"
-        cur.execute(up_sql,(site,account,str(rest[-1][2]),str(rest[-1][3]),str(rest[-1][-3]),str(rest[-1][-2]),str(rest[-1][-1]),tm[:10],tm[11:13],site,account))
+        cur.executemany(up_sql,[(site,account,str(rest[-1][2]),str(rest[-1][3]),str(rest[-1][-3]),str(rest[-1][-2]),str(rest[-1][-1]),tm[:10],tm[11:13],site,account)])
         #cur.execute("""update qr_hourly_user_data set site_id=%s,qr_code_id=%s,VISITS=%s,UNIQUES=%s,user_browser=%s,user_device_os=%s,ipaddress=%s where scanned_date="%s" and hour=%s and site_id=%s and qr_code_id=%s order by scanned_date and hour desc limit 1""",(site,account,str(rest[-1][2]),str(rest[-1][3]),str(rest[-1][-3]),str(rest[-1][-2]),str(rest[-1][-1]),tm[:10],tm[11:13],site,account))
         con.commit()
 
