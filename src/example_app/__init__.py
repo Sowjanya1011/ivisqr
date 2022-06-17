@@ -85,7 +85,7 @@ def index(site,account):
                     latlng = get_latlng(site)
                     rule = get_temp(latlng[0],latlng[1],data[0])
                     rule_id = get_rule(rule)
-                    a_id = get_assetId(account,rule_id)
+                    a_id = get_assetId(account,rule_id,site)
         else :
             data = get_device(account,site)
             latlng = get_latlng(site)
