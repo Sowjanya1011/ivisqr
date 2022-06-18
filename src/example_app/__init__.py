@@ -29,7 +29,7 @@ password = os.environ.get('RDS_PASS')
 database = os.environ.get('RDS_DB')
 #port = int(os.environ.get('RDS_PORT'))
 device_type = os.environ.get('DEVICE_TYPE')
-asset_url = os.environ.get('ASSET_URL')+str(site)
+asset_url = os.environ.get('ASSET_URL')
 # take one record for each hour using list like ‘rest’ -->its a temperary variable changed for each hour
 rest=[]
 #assigning Flask method to app variable
@@ -102,7 +102,7 @@ def index(site,account):
         a_id = 1
         
     res = get_asset(a_id)
-    qr_res = asset_url+'/'+res
+    qr_res = asset_url+str(site)+'/'+res
     # returned when calling above api index.html will displayed
     return render_template('index.html',res = qr_res)
 
