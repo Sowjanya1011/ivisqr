@@ -64,8 +64,8 @@ def index(site,account):
         #→assigning ‘a’ variable to what getting data from flask
         a = [tm[:10],tm[11:13],data['ip'],data['browser'],data['os']] 
     #threading applied to extra functions what needs to done  and for store data in database 
-    dbst = threading.Thread(target=dbstdata(a,data,site,account,tm)).start()
-    rawdata = threading.Thread(target=raw_data(a,site,account)).start()
+    dbst = threading.Thread(target=dbstdata, args=[a,data,site,account,tm]).start()
+    rawdata = threading.Thread(target=raw_data, args=[a,site,account]).start()
     #qr_code_id as account , site_id as site
     #calling rule function for getting rule from qr_code_id
     try:
